@@ -2,11 +2,15 @@
 r-package-healthier-u created by GitHub Classroom
 ---
 title: "README"
+
 author: "Julia Mullokandova, Isaac Zhao, Carol Shum"
+
 date: "November 15, 2017"
+
 output: md_document
 ---
 #Outline of R Package
+
 #Package Name:HealthierU
 
 #Create Function called Health Analysis
