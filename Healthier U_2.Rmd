@@ -1,9 +1,12 @@
 ---
 title: "Healthier U"
-author: "Isaac Zhao"
+author: "Isaac Zhao","Carol Shum","Julia Mullokandova"
 date: "November 26, 2017"
 output: html_document
 ---
+##Background
+HealthierU is a package designed to help develop a personal exercise plan based on one's satisfaction with their weight and long term health goals. The function can calculate BMI from height and weight entered in either standard or metric measurements. This value is then compared to the United States national average with a graph. For those individuals, who are classified as Normal Weight or Obese have the option to utilize the Personal Trainer and create an exercise plan based on their target goal, intensity of workout, and target date within reason. The output will produce a suggested list of exercises to choose from.
+
 ```{r}
 install.packages("XML")
 install.packages("RCurl")
@@ -16,13 +19,14 @@ weight <- 130
 
 Create function called Health Analysis. In this function, we will take health variables such as Height and Weight to establish a diagnosis of their BMI. We will write an equation for BMI. No web scraping will be needed.
 ```{r}
-health.analysis <- function(height,weight) {    # Input height (in) and weight (lb) into function
+health.analysis <- function(height,weight,convert=TRUE) {    # Input height (in) and weight (lb) into function
 
-if (height < 2.5) {     # Checks to see if height is impossibly low
-    print("Invalid input. Height must be in inches")
-} else if (height > 2.5 && weight < 60) {       # Checks to see if weight is impossibly low
-    print("Invalid input. Weight must be in pounds")
-}
+if (convert==TRUE && height >= 100 && (weight / height^2 * 703) < 15) {     # Checks to see if units are in metric
+print("Inputted height and weight may be in metric units. Automatically converting to standard units to compute BMI. Override with convert=FALSE") 
+height <- height/2.54
+weight <- weight * 2.20462
+} 
+
     
 BMI <- weight / height^2 * 703      # Converts height (in) and weight (lb) into BMI
 
@@ -47,7 +51,7 @@ health.analysis(height,weight)
 
 Create Function called PopGraph This function will graph your statistics in comparison to the rest of the U.S. population and print out the diagnosis of underweight, normal, or obese. We will conduct web scraping and use ggplot for graphing.
 ```{r}
-library(tidyverse)
+library(ggplot2)
 
 popgraph <- function(height,weight) {
     
@@ -91,13 +95,24 @@ url.1<-"http://www.nutristrategy.com/caloriesburned.htm"
 #Use getURL to download the URL
 urldata.1<-getURL(url.1)
 #read the table from the website 
-data_table.1<-readHTMLTable(urldata.1, stringsAsFactors=FALSE)
+data_table.1<-readHTMLTable(urldata.1, which=1)
 #print out data table
-data_table.1
+table.paste<-function(){
+  old=data.frame(data_table.1[[1]][13:261])
+  for (i in 2:5){
+    old=cbind(old,data.frame(data_table.1[[i]][13:261]))
+  }
+  return(old)
+}
+data_table.1=table.paste()
 
-data_table.1<-cbind(data_table.1, c(1:249))
+lame_exercises<-c(3:4,7:9,11,13,22,24,26:28,33,35,39,41,43,45,48:56,60:64,66,68:74,81:82,84:85,89,93:100,104:105,108,116,118,120:121,124,126,128:129,134:136,138:139,141:169,171:178,184:194,197:204,208:210,214,216:249)
 
+colnames(data_table.1)<-c("Activity","p1","p2","p3","p4")
 
+data_table.1<-data_table.1[-lame_exercises, ]
+
+cbind(data.frame(act=c(130, 155, 180, 205)),cal=as.numeric(x[2:5,1]))
 
 ```
 
@@ -113,11 +128,13 @@ if (target.weight > weight) {       # Checks to see if target weight is less tha
     print("This is a weight loss program")
 }
 
-weight.per.week <- (target.weight - weight) / 12    # How many lbs should be lost per week on average
+cal.per.week <- (target.weight - weight) / 12 * 3500   # How many calories should be lost per week on average
 
-if (weight.per.week >=5){       # Checks to see if weight loss plan is too extreme
-    print("Workout plan may be unrealistic and unhealthy")
+if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
+    print("Losing more than 2 lbs/week may be considered unrealistic and unsafe")
 }
+
+
 
 }
 
