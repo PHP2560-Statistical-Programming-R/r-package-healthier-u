@@ -1,0 +1,192 @@
+---
+title: "Healthier U"
+author: "Isaac Zhao","Carol Shum","Julia Mullokandova"
+date: "November 26, 2017"
+output: html_document
+---
+##Background
+HealthierU is a package designed to help develop a personal exercise plan based on one's satisfaction with their weight and long term health goals. The function can calculate BMI from height and weight entered in either standard or metric measurements. This value is then compared to the United States national average with a graph. For those individuals, who are classified as Normal Weight or Obese have the option to utilize the Personal Trainer and create an exercise plan based on their target goal, intensity of workout, and target date within reason. The output will produce a suggested list of exercises to choose from.
+
+```{r}
+check_packages = function(names)
+{
+  for(name in names)
+  {
+    if (!(name %in% installed.packages()))
+      install.packages(name, repos="http://cran.us.r-project.org")
+    
+    library(name, character.only=TRUE)
+  }
+}
+```
+
+
+```{r}
+#install.packages("XML")
+#install.packages("RCurl")
+#install.packages("reshape")
+#install.packages("plyr")
+#install.packages("dplyr")
+#install.packages("broom")
+
+check_packages(c("XML","RCurl","reshape","plyr","dplyr","broom","ggplot2"))   # Checks to see if required packages are already installed.
+```
+
+```{r}
+height <- 65
+weight <- 130
+```
+
+Create function called Health Analysis. In this function, we will take health variables such as Height and Weight to establish a diagnosis of their BMI. We will write an equation for BMI. No web scraping will be needed.
+```{r}
+health.analysis <- function(height,weight,convert=TRUE) {    # Input height (in) and weight (lb) into function
+
+if (convert==TRUE && height >= 100 && (weight / height^2 * 703) < 15) {     # Checks to see if units are in metric
+print("Inputted height and weight may be in metric units. Automatically converting to standard units to compute BMI. Override with convert=FALSE") 
+height <- height/2.54
+weight <- weight * 2.20462
+} 
+    
+BMI <- weight / height^2 * 703      # Converts height (in) and weight (lb) into BMI
+
+# Classifies Diagnosis based on BMI 
+if (BMI < 18.5) {
+    Diagnosis <- "Underweight"
+} else if (BMI >= 18.5 && BMI < 25) {
+    Diagnosis <- "Normal Weight"
+} else if (BMI >= 25 && BMI < 30) {
+    Diagnosis <- "Overweight"
+} else if (BMI >= 30) {
+    Diagnosis <- "Obese"
+}
+
+output<-list(BMI=BMI,Diagnosis=Diagnosis)       # Creates a list so function can return two variables
+return(output)      # Function outputs variable BMI and Diagnosis
+}
+
+health.analysis(height,weight)
+```
+
+
+Create Function called PopGraph This function will graph your statistics in comparison to the rest of the U.S. population and print out the diagnosis of underweight, normal, or obese. We will conduct web scraping and use ggplot for graphing.
+```{r}
+library(ggplot2)
+
+popgraph <- function(height,weight) {
+    
+bmi <- health.analysis(height,weight)$BMI
+diagnosis <- health.analysis(height,weight)$Diagnosis
+percent <- round(pnorm(bmi,25.6,4) * 100, 2)
+
+ggplot(data.frame(x=c(10,41.2)), aes(x)) +    # Creates plot from x = 10.6 to 40.6
+# Plots a normal curve with mean = 25.6, sd = 4. Colors area blue.
+    stat_function(fun=dnorm, args=list(25.6,4), color = "dodgerblue", size = 2, geom="area", fill="cadetblue1", alpha = 0.4) +     
+    scale_x_continuous(name="BMI") +        # Labels x axis "BMI"
+    ggtitle("Percent of United States Population Less Than Given BMI") +   # Adds a graph title
+    theme_bw() +        # Makes the background white theme
+# Shades only below given BMI dark blue
+    stat_function(fun=dnorm, args=list(25.6,4), xlim=c(10,bmi), geom="area", fill="cadetblue3", alpha = 0.7) +   
+    
+    geom_vline(xintercept=c(18.5,25,30)) +      # Adds black vertical lines in desired locations
+    geom_label(aes(35.5,0.08,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=4.3)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
+    geom_label(aes(35.5,0.0675, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=2.3) +
+    geom_text(aes(25.6,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
+    geom_text(aes(25.6,0.0001, label=paste0("|", "\n", "US Average")), color="green") +  # Adds average tick mark
+    geom_text(aes(15,0.1, label="Underweight")) +
+    geom_text(aes(22,0.1, label="Normal Weight")) +
+    geom_text(aes(27.5,0.1, label="Overweight")) +
+    geom_text(aes(32,0.1, label="Obese")) +
+    theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
+}
+
+popgraph(height,weight)
+```
+
+
+Create Function called Personal Trainer. For this function, we will develop a personalized exercise regimen based off of your current weight, your target weight, and the period from now until the target date. We will incorporate the intensity of the exercise and the number of hours desired to exercise weekly. This will in turn ouput a list of activities. This function only creates a plan for WEIGHT LOSS. We are planning on webscraping data from: http://www.nutristrategy.com/caloriesburned.htm
+
+```{r}
+#Webscraping
+library(XML)
+library(RCurl)
+#Save URL into a variable
+url.1<-"http://www.nutristrategy.com/caloriesburned.htm"
+#Use getURL to download the URL
+urldata.1<-getURL(url.1)
+#read the table from the website 
+data_table.1<-readHTMLTable(urldata.1, which=1)
+#print out data table
+table.paste<-function(){
+  old=data.frame(data_table.1[[1]][13:261])
+  for (i in 2:5){
+    old=cbind(old,data.frame(data_table.1[[i]][13:261]))
+  }
+  return(old)
+}
+data_table.1=table.paste()
+
+lame_exercises<-c(3:4,7:9,11,13,22,24,26:28,33,35,39,41,43,45,48:56,60:64,66,68:74,81:82,84:85,89,93:100,104:105,108,116,118,120:121,124,126,128:129,134:136,138:139,141:169,171:178,184:194,197:204,208:210,214,216:249)
+
+colnames(data_table.1)<-c("Activity","p130","p155","p180","p205")
+
+data_table.1<-data_table.1[-lame_exercises, ]
+
+
+```
+
+```{r}
+#Use scraped data to calculate regression coefficients
+library(plyr)
+library(dplyr)
+library(reshape)
+library(broom)
+
+data_table.2<-melt(data_table.1, id="Activity")
+data_table.2<-data_table.2 %>% 
+              mutate_at("variable", funs(as.numeric(substr(., 2, 4)))) %>%
+              arrange(Activity)
+
+mods <- dlply(data_table.2, .(Activity), lm, formula=as.numeric(as.character(value))~as.numeric(variable)-1)
+coefs = ldply(mods, coef)
+
+reg_table= inner_join(data_table.1, coefs, by="Activity")
+names(reg_table)[6]<-"coef"
+```
+
+###Note: This training regimen assumes client's diet stays consistent.
+```{r}
+weight <- 130
+target.weight <- 120
+target.date <- 12       # Period from now until target date in weeks
+intensity <- 3     # Total number of hours per week individual can devote to weight loss program
+
+personal.trainer <- function(weight,target.weight,target.date,intensity) {
+
+if (target.weight > weight) {       # Checks to see if target weight is less than current weight
+    print("This is a weight loss program")
+}
+
+cal.per.week <- -((target.weight - weight) / target.date * 3500)   # How many calories should be lost per week on average
+                                                                   # Carol: flipped sign to positive. Changed 12 to target.date
+
+reg_table<- reg_table %>% group_by(Activity)%>%
+            mutate(burn.rate=mean(c(target.weight, weight))*coef,
+                   burn.calories=burn.rate*intensity) 
+
+if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
+    print("Losing more than 2 lbs/week may be considered unrealistic and unsafe")
+}else{ 
+  summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories & (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
+}
+
+if (nrow(summary_table)==0){      # Checks to see if any exercises are available
+    print("No exercises match your criteria. Please consider increasing intensity or target date to achieve desired weight")
+} else{
+summary_table %>% select(Activity,burn.rate)
+}
+}
+
+personal.trainer(weight,target.weight,target.date,intensity)
+```
+
+
