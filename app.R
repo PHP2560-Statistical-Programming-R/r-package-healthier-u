@@ -16,22 +16,28 @@ check_packages(c("shiny","XML","RCurl","reshape","plyr","dplyr","broom","ggplot2
 ######################################################################################
 
 # First function to calculate BMI and Diagnosis (Used for second function to graph BMI).
-health.analysis <- function(height,weight) {    # Input height (in) and weight (lb) into function
+bmi.diagnosis<-function(bmi){
+  if (bmi < 18.5) {
+    Diagnosis <- "Underweight"
+  } else if (bmi >= 18.5 && bmi < 25) {
+    Diagnosis <- "Normal Weight"
+  } else if (bmi >= 25 && bmi < 30) {
+    Diagnosis <- "Overweight"
+  } else if (bmi >= 30) {
+    Diagnosis <- "Obese"
+  }
+  return(Diagnosis)
+}
+health.analysis <- function(height,weight, target.weight) {    # Input height (in) and weight (lb) into function
 
     BMI <- weight / height^2 * 703              # Converts height (in) and weight (lb) into BMI
+    target.BMI <- target.weight / height^2 * 703       # Converts height (in) and target weight (lb) into BMI
     
     # Classifies Diagnosis based on BMI 
-    if (BMI < 18.5) {
-        Diagnosis <- "Underweight"
-    } else if (BMI >= 18.5 && BMI < 25) {
-        Diagnosis <- "Normal Weight"
-    } else if (BMI >= 25 && BMI < 30) {
-        Diagnosis <- "Overweight"
-    } else if (BMI >= 30) {
-        Diagnosis <- "Obese"
-    }
+    Diagnosis=bmi.diagnosis(BMI)
+    target.diagnosis=bmi.diagnosis(target.BMI)
     
-    output<-list(BMI=BMI,Diagnosis=Diagnosis)       # Creates a list so function can return two variables
+    output<-list(BMI=BMI,Diagnosis=Diagnosis, Target.BMI=target.BMI, Target.Diagnosis=target.diagnosis)       # Creates a list so function can return two variables
     return(output)      # Function outputs variable BMI and Diagnosis
 }
 
@@ -107,8 +113,11 @@ server <- function(input, output) {
         gender <- input$gender
         height <- input$height      # Converts Shiny App user input for height slidebar into one variable
         weight <- input$weights[2]  # Converts Shiny App user input for current weight slidebar into one variable
-        bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
-        diagnosis <- health.analysis(height,weight)$Diagnosis   # Gets BMI diagnosis from previously specified function
+        target.weight<-input$weights[1] # Converts Shiny App user input for target weight slidebar into one variable
+        bmi <- health.analysis(height,weight, target.weight)$BMI               # Gets BMI from previously specified function
+        diagnosis <- health.analysis(height,weight, target.weight)$Diagnosis   # Gets BMI diagnosis from previously specified function
+        target.bmi <- health.analysis(height,weight, target.weight)$Target.BMI  # Converts height (in) and weight (lb) into target BMI
+        target.diagnosis <- health.analysis(height,weight, target.weight)$Target.Diagnosis   # Gets BMI diagnosis from previously specified function
         
         if (gender == "Male") {
             mean <- 28.7
@@ -133,15 +142,18 @@ server <- function(input, output) {
             # Plots a normal curve with mean = 25.6, sd = 4. Colors area below light blue.
             stat_function(fun=dnorm, args=list(mean,sd), color = color1, size = 2, geom="area", fill=fill1, alpha = 0.4) +     
             scale_x_continuous(name="BMI") +            # Labels x axis "BMI"
-            ggtitle(paste0("Percent of United States Adult ",gender,"s ", "Less Than Given BMI")) +   # Adds a graph title
+            ggtitle(paste0("BMI Distribution In The United States For ",gender, " Adult")) +   # Adds a graph title
+            theme(plot.title = element_text(size = 30, face = "bold", hjust=.25)) +
             theme_classic() +                           # Makes the background white theme
             # Shades the normal curve to the left of given BMI dark blue
-            stat_function(fun=dnorm, args=list(mean,sd), xlim=c(10,bmi), geom="area", fill=fill2, alpha = 0.7) +   
+            stat_function(fun=dnorm, args=list(mean,sd), xlim=c(target.bmi,bmi), geom="area", fill=fill2, alpha = 0.7) +
+             
             
             # Creates lines and text on graph
             geom_vline(xintercept=c(18.5,25,30)) +              # Adds black vertical lines in desired x locations
-            geom_label(aes(43,0.045-y,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=7)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
-            geom_label(aes(43,0.035-y, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4) +
+            geom_label(aes(43,0.045-y,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=5)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
+            geom_label(aes(43,0.035-y,label=paste0("Your Target BMI:  ", round(target.bmi,digits=1), "\n", "Diagnosis:  ", target.diagnosis)), size=5)  +
+            geom_label(aes(43,0.025-y, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4) +
             geom_text(aes(mean,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
             geom_text(aes(mean,0.0001, label=paste0("|", "\n", "U.S. Average")), color=color1) +  # Adds average tick mark
             geom_text(aes(15,0.05-y, label="Underweight")) +       # Adds Underweight text in top corresponding region
@@ -158,9 +170,9 @@ server <- function(input, output) {
     output$exercises <- renderTable({
         height <- input$height            # Converts Shiny App user input for height slidebar into one variable
         weight<-input$weights[2]          # Converts Shiny App user input for current weight slidebar into one variable
-        bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
+        bmi <- health.analysis(height,weight, target.weight)$BMI               # Gets BMI from previously specified function
         target.weight<-input$weights[1]   # Converts Shiny App user input for desired weight slidebar into one variable
-        target.bmi <- target.weight / height^2 * 703            # Converts height (in) and weight (lb) into target BMI
+        target.bmi <- health.analysis(height,weight, target.weight)$Target.BMI            # Converts height (in) and weight (lb) into target BMI
         target.date<-input$target.date    # Converts Shiny App user input for desired date slidebar into one variable
         intensity<-input$intensity        # Converts Shiny App user input for intensity slidebar into one variable
         
@@ -185,7 +197,7 @@ server <- function(input, output) {
         } else if (nrow(summary_table)==0){    # Checks to see if any exercises are available
             print("No exercises match your criteria. Please change intensity and/or target date.")
         } else{
-            summary_table %>% select(Activity,burn.rate) %>% arrange(burn.rate) %>% rename()  # Prints all exercises that can burn that many calories per hour
+            summary_table %>% select(Activity,burn.rate) %>% arrange(burn.rate) %>% rename("Calories Per Hour"=burn.rate)  # Prints all exercises that can burn that many calories per hour
         }
     })
 }
