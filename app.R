@@ -102,7 +102,6 @@ server <- function(input, output) {
     output$weight_distribution <- renderPlot({
         height <- input$height      # Converts Shiny App user input for height slidebar into one variable
         weight <- input$weights[2]  # Converts Shiny App user input for current weight slidebar into one variable
-        
         bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
         diagnosis <- health.analysis(height,weight)$Diagnosis   # Gets BMI diagnosis from previously specified function
         percent <- round(pnorm(bmi,25.6,4) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
@@ -139,6 +138,9 @@ server <- function(input, output) {
         target.weight<-input$weights[1]   # Converts Shiny App user input for desired weight slidebar into one variable
         target.date<-input$target.date    # Converts Shiny App user input for desired date slidebar into one variable
         intensity<-input$intensity        # Converts Shiny App user input for intensity slidebar into one variable
+        height <- input$height      # Converts Shiny App user input for height slidebar into one variable
+        bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
+        target.bmi <- target.weight / height^2 * 703      # Converts height (in) and weight (lb) into target BMI
         
         cal.per.week <- -((target.weight - weight) / target.date * 3500)   # How many calories should be lost per week on average
         
@@ -148,10 +150,15 @@ server <- function(input, output) {
         
             summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories & (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
         
-        
-        if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
-            print("Losing more than 2 lbs per week may be considered unrealistic and unsafe.")
-        } else if (nrow(summary_table)==0){      # Checks to see if any exercises are available
+        if (target.bmi < 17) {      # Checks to see if target weight is too low
+            if (bmi > 17){          
+            print("Desired weight is very underweight and may be unhealthy. Please consider a different weight.")
+            } else{                 # Checks to see if current weight needs a weight loss program
+            print("You are already very underweight and may not need a weight loss program.")
+            }
+        } else if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
+            print("Losing more than 2 lbs/week may be considered unrealistic and unsafe.")
+        } else if (nrow(summary_table)==0){    # Checks to see if any exercises are available
             print("No exercises match your criteria. Please change intensity and/or target date.")
         } else{
             summary_table %>% select(Activity,burn.rate)    # Prints all exercises that can burn that many calories per hour
