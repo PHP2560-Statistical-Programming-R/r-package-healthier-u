@@ -112,7 +112,7 @@ server <- function(input, output) {
             stat_function(fun=dnorm, args=list(25.6,4), color = "dodgerblue", size = 2, geom="area", fill="cadetblue1", alpha = 0.4) +     
             scale_x_continuous(name="BMI") +        # Labels x axis "BMI"
             ggtitle("Percent of United States Population Less Than Given BMI") +   # Adds a graph title
-            theme_bw() +        # Makes the background white theme
+            theme_classic() +        # Makes the background white theme
             # Shades the normal curve to the left of given BMI dark blue
             stat_function(fun=dnorm, args=list(25.6,4), xlim=c(10.6,bmi), geom="area", fill="cadetblue3", alpha = 0.7) +   
             
