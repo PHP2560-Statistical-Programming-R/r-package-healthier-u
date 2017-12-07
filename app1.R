@@ -32,11 +32,9 @@ health.analysis <- function(height,weight, target.weight, unit=input$metric_sys)
     
     if (unit=="Standard"){
     BMI <- weight / height^2 * 703              # Converts height (in) and weight (lb) into BMI
-    
     target.BMI <- target.weight / height^2 * 703       # Converts height (in) and target weight (lb) into BMI
     } else if (unit=="Metric"){
     BMI <- (weight*2.205) / (height*0.3937)^2 * 703              # Converts height (in) and weight (lb) into BMI
-        
     target.BMI <- target.weight*2.205 / (height*0.3937)^2 * 703       # Converts height (in) and target weight (lb) into BMI
     }
     
@@ -78,13 +76,16 @@ data_table.1<-data_table.1[-lame_exercises, ]
 data_table.2<-melt(data_table.1, id="Activity")
 data_table.2<-data_table.2 %>% 
     mutate_at("variable", funs(as.numeric(substr(., 2, 4)))) %>%
+    mutate(metric=variable*.454)%>%
     arrange(Activity)
 
-mods <- dlply(data_table.2, .(Activity), lm, formula=as.numeric(as.character(value))~as.numeric(variable)-1)
-coefs = ldply(mods, coef)
+mods.standard <- dlply(data_table.2, .(Activity), lm, formula=as.numeric(as.character(value))~as.numeric(variable)-1)
+mods.metric <- dlply(data_table.2, .(Activity), lm, formula=as.numeric(as.character(value))~as.numeric(metric)-1)
+coefs.standard = ldply(mods.standard, coef)
+coefs.metric= ldply(mods.metric, coef)
 
-reg_table= inner_join(data_table.1, coefs, by="Activity")
-names(reg_table)[6]<-"coef"
+reg_table= inner_join(data_table.1, coefs.standard) %>% inner_join(.,coefs.metric, by="Activity")
+names(reg_table)[6:7]<-c("standard", "metric")
 
 
 ######################################################################################
@@ -106,9 +107,9 @@ ui <- fluidPage(
         ),
         
         mainPanel(
-            wellPanel(tags$ins(tags$b(plotOutput("weight_distribution")))),
+            wellPanel(plotOutput("weight_distribution"), inline=T),
             br(), br(),  "Your BMI fits the criteria to participate in our weight loss program!",  # Adds two spaces for separation
-            wellPanel(tags$ins(tags$b(tableOutput("exercises"))))
+            wellPanel(tableOutput("exercises"),inline=T)
             #tableOutput("exercises")             # Name of table to be referenced below
         )
     )
@@ -142,10 +143,11 @@ server <- function(input, output) {
         height <- input$height      # Converts Shiny App user input for height slidebar into one variable
         weight <- input$weights[2]  # Converts Shiny App user input for current weight slidebar into one variable
         target.weight<-input$weights[1] # Converts Shiny App user input for target weight slidebar into one variable
-        bmi <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$BMI               # Gets BMI from previously specified function
-        diagnosis <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$Diagnosis   # Gets BMI diagnosis from previously specified function
-        target.bmi <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$Target.BMI  # Converts height (in) and weight (lb) into target BMI
-        target.diagnosis <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$Target.Diagnosis   # Gets BMI diagnosis from previously specified function
+        units<-input$metric_sys
+        bmi <- health.analysis(height,weight, target.weight,units)$BMI               # Gets BMI from previously specified function
+        diagnosis <- health.analysis(height,weight, target.weight,units)$Diagnosis   # Gets BMI diagnosis from previously specified function
+        target.bmi <- health.analysis(height,weight, target.weight,units)$Target.BMI  # Converts height (in) and weight (lb) into target BMI
+        target.diagnosis <- health.analysis(height,weight, target.weight,units)$Target.Diagnosis   # Gets BMI diagnosis from previously specified function
         
         if (gender == "Male") {
             mean <- 28.7
@@ -200,22 +202,24 @@ server <- function(input, output) {
         height <- input$height            # Converts Shiny App user input for height slidebar into one variable
         weight<-input$weights[2]          # Converts Shiny App user input for current weight slidebar into one variable
         target.weight<-input$weights[1]   # Converts Shiny App user input for desired weight slidebar into one variable
-        bmi <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$BMI               # Gets BMI from previously specified function
+        bmi <- health.analysis(height,weight, target.weight,units)$BMI               # Gets BMI from previously specified function
        
-        target.bmi <- health.analysis(height,weight, target.weight,unit=input$metric_sys)$Target.BMI            # Converts height (in) and weight (lb) into target BMI
+        target.bmi <- health.analysis(height,weight, target.weight,units)$Target.BMI            # Converts height (in) and weight (lb) into target BMI
         target.date<-input$target.date    # Converts Shiny App user input for desired date slidebar into one variable
         intensity<-input$intensity        # Converts Shiny App user input for intensity slidebar into one variable
         
         if (units == "Standard"){
         cal.per.week <- -((target.weight - weight) / target.date * 3500)   # How many calories should be lost per week on average
+        reg_table<- reg_table %>% group_by(Activity)%>%
+          mutate(burn.rate=mean(c(target.weight, weight))*standard,
+                 burn.calories=burn.rate*intensity) 
         } else if (units =="Metric"){
         cal.per.week <- -((target.weight - weight) / target.date * 3500/ 0.453592)   # How many calories should be lost per week on average
+        reg_table<- reg_table %>% group_by(Activity)%>%
+          mutate(burn.rate=mean(c(target.weight, weight))*metric,
+                 burn.calories=burn.rate*intensity) 
         }
         
-        
-        reg_table<- reg_table %>% group_by(Activity)%>%
-            mutate(burn.rate=mean(c(target.weight, weight))*coef,
-                   burn.calories=burn.rate*intensity) 
         
             summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories) 
             #& (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
