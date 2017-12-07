@@ -84,14 +84,17 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             # Adding input slider bars reference name, label, min/max values, and starting value respectively
-            sliderInput("height", "Current Height (in)", min = 55, max = 85, value = 65),
-            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 85, max = 350,value = c(134,154)),
+            radioButtons("gender", "Gender", c("Male","Female")),
+            
+            sliderInput("height", "Current Height (in)", min = 55, max = 85, value = 70),
+            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 85, max = 350,value = c(180,200)),
             sliderInput("target.date", "Maximum Number of Weeks To Achieve Desired Weight", min = 1, max = 100,value = 50),
             sliderInput("intensity", "Number of Hours Devoted to Exercising Every Week", min = 1, max = 20,value = 5)
         ),
+        
         mainPanel(
             plotOutput("weight_distribution"),   # Name of graph to be referenced below
-            br(), br(),                          # Adds two spaces for separation
+            br(), br(),  "Your BMI fits the criteria to participate in our weight loss program!",  # Adds two spaces for separation
             tableOutput("exercises")             # Name of table to be referenced below
         )
     )
@@ -101,33 +104,51 @@ ui <- fluidPage(
 server <- function(input, output) {
     # Adds graph for bmi distribution
     output$weight_distribution <- renderPlot({
+        gender <- input$gender
         height <- input$height      # Converts Shiny App user input for height slidebar into one variable
         weight <- input$weights[2]  # Converts Shiny App user input for current weight slidebar into one variable
         bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
         diagnosis <- health.analysis(height,weight)$Diagnosis   # Gets BMI diagnosis from previously specified function
-        percent <- round(pnorm(bmi,25.6,4) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
-
+        
+        if (gender == "Male") {
+            mean <- 28.7
+            sd <- sqrt(5223)*0.13
+            fill1 <- "cadetblue1"
+            fill2 <- "cadetblue3"
+            color1 <- "cadetblue4"
+            y <- 0
+        } else if (gender =="Female"){
+            mean <- 29.2
+            sd <- sqrt(5413)*0.17
+            fill1 <- "lightpink1"
+            fill2 <- "lightpink3"
+            color1 <- "lightpink4"
+            y <- 0.01
+        }
+        
+        percent <- round(pnorm(bmi,mean,sd) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
+        
         # Creates cumulative normal distribution graph shading in given BMI
-        ggplot(data.frame(x=c(10.6,40.6)), aes(x)) +    # Creates plot from x = 10.6 to 40.6
+        ggplot(data.frame(x=c(10,48)), aes(x)) +    # Creates plot from x = 10.6 to 40.6
             # Plots a normal curve with mean = 25.6, sd = 4. Colors area below light blue.
-            stat_function(fun=dnorm, args=list(25.6,4), color = "dodgerblue", size = 2, geom="area", fill="cadetblue1", alpha = 0.4) +     
+            stat_function(fun=dnorm, args=list(mean,sd), color = color1, size = 2, geom="area", fill=fill1, alpha = 0.4) +     
             scale_x_continuous(name="BMI") +            # Labels x axis "BMI"
-            ggtitle("Percent of United States Population Less Than Given BMI") +   # Adds a graph title
+            ggtitle(paste0("Percent of United States Adult ",gender,"s ", "Less Than Given BMI")) +   # Adds a graph title
             theme_classic() +                           # Makes the background white theme
             # Shades the normal curve to the left of given BMI dark blue
-            stat_function(fun=dnorm, args=list(25.6,4), xlim=c(10.6,bmi), geom="area", fill="cadetblue3", alpha = 0.7) +   
+            stat_function(fun=dnorm, args=list(mean,sd), xlim=c(10,bmi), geom="area", fill=fill2, alpha = 0.7) +   
             
             # Creates lines and text on graph
             geom_vline(xintercept=c(18.5,25,30)) +              # Adds black vertical lines in desired x locations
-            geom_label(aes(35.5,0.085,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=8)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
-            geom_label(aes(35.5,0.067, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4.5) +
-            geom_text(aes(25.6,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
-            geom_text(aes(25.6,0.0001, label=paste0("|", "\n", "US Average")), color="green") +  # Adds average tick mark
-            geom_text(aes(15,0.1, label="Underweight")) +       # Adds Underweight text in top corresponding region
-            geom_text(aes(22,0.1, label="Normal Weight")) +     # Adds Normal Weight text in top corresponding region
-            geom_text(aes(27.5,0.1, label="Overweight")) +      # Adds Overweight text in top corresponding region
-            geom_text(aes(32,0.1, label="Obese")) +             # Adds Obese text in top corresponding region
-            theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
+            geom_label(aes(43,0.045-y,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=7)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
+            geom_label(aes(43,0.035-y, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4) +
+            geom_text(aes(mean,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
+            geom_text(aes(mean,0.0001, label=paste0("|", "\n", "U.S. Average")), color=color1) +  # Adds average tick mark
+            geom_text(aes(15,0.05-y, label="Underweight")) +       # Adds Underweight text in top corresponding region
+            geom_text(aes(22,0.05-y, label="Normal Weight")) +     # Adds Normal Weight text in top corresponding region
+            geom_text(aes(27.5,0.05-y, label="Overweight")) +      # Adds Overweight text in top corresponding region
+            geom_text(aes(32,0.05-y, label="Obese"))              # Adds Obese text in top corresponding region
+            #theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
         
     })
     
@@ -164,7 +185,7 @@ server <- function(input, output) {
         } else if (nrow(summary_table)==0){    # Checks to see if any exercises are available
             print("No exercises match your criteria. Please change intensity and/or target date.")
         } else{
-            summary_table %>% select(Activity,burn.rate) %>% arrange(burn.rate)   # Prints all exercises that can burn that many calories per hour
+            summary_table %>% select(Activity,burn.rate) %>% arrange(burn.rate) %>% rename()  # Prints all exercises that can burn that many calories per hour
         }
     })
 }
