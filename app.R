@@ -15,10 +15,10 @@ check_packages(c("shiny","XML","RCurl","reshape","plyr","dplyr","broom","ggplot2
 ######################################################################################
 ######################################################################################
 
-# First function to calculate BMI and Diagnosis (Used for bmi graph and exercise table).
+# First function to calculate BMI and Diagnosis (Used for second function to graph BMI).
 health.analysis <- function(height,weight) {    # Input height (in) and weight (lb) into function
 
-    BMI <- weight / height^2 * 703      # Converts height (in) and weight (lb) into BMI
+    BMI <- weight / height^2 * 703              # Converts height (in) and weight (lb) into BMI
     
     # Classifies Diagnosis based on BMI 
     if (BMI < 18.5) {
@@ -75,10 +75,10 @@ names(reg_table)[6]<-"coef"
 
 
 ######################################################################################
-######################### Building Shiny App ########################################
+######################### Building Shiny App #########################################
 ######################################################################################
 
-# Creating Input section of Shiny App
+### Creating Input section of Shiny App ###
 ui <- fluidPage(
     titlePanel("Healthier U - Weight Loss Program"),    # Adds Title
     sidebarLayout(
@@ -96,7 +96,8 @@ ui <- fluidPage(
         )
     )
 )
-# Creating Output section of Shiny App
+
+### Creating Output section of Shiny App ###
 server <- function(input, output) {
     # Adds graph for bmi distribution
     output$weight_distribution <- renderPlot({
@@ -110,37 +111,37 @@ server <- function(input, output) {
         ggplot(data.frame(x=c(10.6,40.6)), aes(x)) +    # Creates plot from x = 10.6 to 40.6
             # Plots a normal curve with mean = 25.6, sd = 4. Colors area below light blue.
             stat_function(fun=dnorm, args=list(25.6,4), color = "dodgerblue", size = 2, geom="area", fill="cadetblue1", alpha = 0.4) +     
-            scale_x_continuous(name="BMI") +        # Labels x axis "BMI"
+            scale_x_continuous(name="BMI") +            # Labels x axis "BMI"
             ggtitle("Percent of United States Population Less Than Given BMI") +   # Adds a graph title
-            theme_classic() +        # Makes the background white theme
+            theme_classic() +                           # Makes the background white theme
             # Shades the normal curve to the left of given BMI dark blue
             stat_function(fun=dnorm, args=list(25.6,4), xlim=c(10.6,bmi), geom="area", fill="cadetblue3", alpha = 0.7) +   
             
             # Creates lines and text on graph
-            geom_vline(xintercept=c(18.5,25,30)) +      # Adds black vertical lines in desired x locations
+            geom_vline(xintercept=c(18.5,25,30)) +              # Adds black vertical lines in desired x locations
             geom_label(aes(35.5,0.085,label=paste0("Your BMI:  ", round(bmi,digits=1), "\n", "Diagnosis:  ", diagnosis)), size=8)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
             geom_label(aes(35.5,0.067, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4.5) +
             geom_text(aes(25.6,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
             geom_text(aes(25.6,0.0001, label=paste0("|", "\n", "US Average")), color="green") +  # Adds average tick mark
-            geom_text(aes(15,0.1, label="Underweight")) +
-            geom_text(aes(22,0.1, label="Normal Weight")) +
-            geom_text(aes(27.5,0.1, label="Overweight")) +
-            geom_text(aes(32,0.1, label="Obese")) +
+            geom_text(aes(15,0.1, label="Underweight")) +       # Adds Underweight text in top corresponding region
+            geom_text(aes(22,0.1, label="Normal Weight")) +     # Adds Normal Weight text in top corresponding region
+            geom_text(aes(27.5,0.1, label="Overweight")) +      # Adds Overweight text in top corresponding region
+            geom_text(aes(32,0.1, label="Obese")) +             # Adds Obese text in top corresponding region
             theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
         
     })
     
 #######################################################################################
     
-# Creating Table of Exercises
+### Creating Table of Exercises ###
     output$exercises <- renderTable({
+        height <- input$height            # Converts Shiny App user input for height slidebar into one variable
         weight<-input$weights[2]          # Converts Shiny App user input for current weight slidebar into one variable
+        bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
+        target.bmi <- target.weight / height^2 * 703            # Converts height (in) and weight (lb) into target BMI
         target.weight<-input$weights[1]   # Converts Shiny App user input for desired weight slidebar into one variable
         target.date<-input$target.date    # Converts Shiny App user input for desired date slidebar into one variable
         intensity<-input$intensity        # Converts Shiny App user input for intensity slidebar into one variable
-        height <- input$height      # Converts Shiny App user input for height slidebar into one variable
-        bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
-        target.bmi <- target.weight / height^2 * 703      # Converts height (in) and weight (lb) into target BMI
         
         cal.per.week <- -((target.weight - weight) / target.date * 3500)   # How many calories should be lost per week on average
         
@@ -150,10 +151,10 @@ server <- function(input, output) {
         
             summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories & (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
         
-        if (target.bmi < 17) {      # Checks to see if target weight is too low
+        if (target.bmi < 17) {                 # Checks to see if target weight is too low
             if (bmi > 17){          
             print("Desired weight is very underweight and may be unhealthy. Please consider a different weight.")
-            } else{                 # Checks to see if current weight needs a weight loss program
+            } else{                            # Checks to see if current weight needs a weight loss program
             print("You are already very underweight and may not need a weight loss program.")
             }
         } else if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
