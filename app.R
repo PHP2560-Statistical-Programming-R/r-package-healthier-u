@@ -138,8 +138,8 @@ server <- function(input, output) {
         height <- input$height            # Converts Shiny App user input for height slidebar into one variable
         weight<-input$weights[2]          # Converts Shiny App user input for current weight slidebar into one variable
         bmi <- health.analysis(height,weight)$BMI               # Gets BMI from previously specified function
-        target.bmi <- target.weight / height^2 * 703            # Converts height (in) and weight (lb) into target BMI
         target.weight<-input$weights[1]   # Converts Shiny App user input for desired weight slidebar into one variable
+        target.bmi <- target.weight / height^2 * 703            # Converts height (in) and weight (lb) into target BMI
         target.date<-input$target.date    # Converts Shiny App user input for desired date slidebar into one variable
         intensity<-input$intensity        # Converts Shiny App user input for intensity slidebar into one variable
         
