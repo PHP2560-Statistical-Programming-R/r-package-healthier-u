@@ -15,7 +15,7 @@ check_packages(c("shiny","XML","RCurl","reshape","plyr","dplyr","broom","ggplot2
 ######################################################################################
 ######################################################################################
 
-# First function to calculate BMI and Diagnosis (Used for second function to graph BMI).
+# First function to calculate BMI and Diagnosis (Used for bmi graph and exercise table).
 health.analysis <- function(height,weight) {    # Input height (in) and weight (lb) into function
 
     BMI <- weight / height^2 * 703      # Converts height (in) and weight (lb) into BMI
