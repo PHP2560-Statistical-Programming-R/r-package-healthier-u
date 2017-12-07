@@ -84,10 +84,10 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             # Adding input slider bars reference name, label, min/max values, and starting value respectively
-            sliderInput("height", "Current Height (in)", min = 50, max = 80, value = 65),
-            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 50, max = 300,value = c(134,154)),
-            sliderInput("target.date", "Number of Weeks To Achieve Desired Weight", min = 1, max = 100,value = 50),
-            sliderInput("intensity", "Number of Hours Devoted to Exercising Every Week", min = 1, max = 10,value = 5)
+            sliderInput("height", "Current Height (in)", min = 55, max = 85, value = 65),
+            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 85, max = 350,value = c(134,154)),
+            sliderInput("target.date", "Maximum Number of Weeks To Achieve Desired Weight", min = 1, max = 100,value = 50),
+            sliderInput("intensity", "Number of Hours Devoted to Exercising Every Week", min = 1, max = 20,value = 5)
         ),
         mainPanel(
             plotOutput("weight_distribution"),   # Name of graph to be referenced below
@@ -149,8 +149,10 @@ server <- function(input, output) {
             mutate(burn.rate=mean(c(target.weight, weight))*coef,
                    burn.calories=burn.rate*intensity) 
         
-            summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories & (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
+            summary_table=reg_table %>% filter((.9*cal.per.week)<=burn.calories) 
+            #& (1.1*cal.per.week)>=burn.calories) #find activities that are within 10% of cal.per.week
         
+    
         if (target.bmi < 17) {                 # Checks to see if target weight is too low
             if (bmi > 17){          
             print("Desired weight is very underweight and may be unhealthy. Please consider a different weight.")
@@ -162,7 +164,7 @@ server <- function(input, output) {
         } else if (nrow(summary_table)==0){    # Checks to see if any exercises are available
             print("No exercises match your criteria. Please change intensity and/or target date.")
         } else{
-            summary_table %>% select(Activity,burn.rate)    # Prints all exercises that can burn that many calories per hour
+            summary_table %>% select(Activity,burn.rate) %>% arrange(burn.rate)   # Prints all exercises that can burn that many calories per hour
         }
     })
 }
