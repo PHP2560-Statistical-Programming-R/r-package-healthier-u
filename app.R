@@ -85,7 +85,7 @@ ui <- fluidPage(
         sidebarPanel(
             # Adding input slider bars reference name, label, min/max values, and starting value respectively
             sliderInput("height", "Current Height (in)", min = 50, max = 80, value = 65),
-            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 50, max = 300,value = c(100,154)),
+            sliderInput("weights", "Desired Weight & Current Weight (lbs)", min = 50, max = 300,value = c(134,154)),
             sliderInput("target.date", "Number of Weeks To Achieve Desired Weight", min = 1, max = 100,value = 50),
             sliderInput("intensity", "Number of Hours Devoted to Exercising Every Week", min = 1, max = 10,value = 5)
         ),
@@ -150,9 +150,9 @@ server <- function(input, output) {
         
         
         if (cal.per.week > 7000){       # Checks to see if weight loss plan is too extreme
-            print("Losing more than 2 lbs/week may be considered unrealistic and unsafe")
+            print("Losing more than 2 lbs per week may be considered unrealistic and unsafe.")
         } else if (nrow(summary_table)==0){      # Checks to see if any exercises are available
-            print("No exercises match your criteria. Please consider increasing intensity or target date to achieve desired weight")
+            print("No exercises match your criteria. Please change intensity and/or target date.")
         } else{
             summary_table %>% select(Activity,burn.rate)    # Prints all exercises that can burn that many calories per hour
         }
