@@ -112,7 +112,6 @@ ui <- fluidPage(
         mainPanel(
             plotOutput("weight_distribution"),    # Prints the bmi graph that was created in output below
             br(), br(),                           # Adds two spaces for separation
-            "Your BMI fits the criteria to participate in our weight loss program!",
             tableOutput("exercises")              # Prints the exercises table that was created in output below
         )
     )
@@ -180,23 +179,27 @@ server <- function(input, output) {
             y <- 0.01                   # Only shifts the labels if gender=female to re-adjust for new y-axis
         }
         
-        percent <- round(pnorm(bmi,mean,sd) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
-        
+        bmi.percent <- round(pnorm(bmi,mean,sd) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
+        target.bmi.percent <- round(pnorm(target.bmi,mean,sd) * 100, 2)            # Rounds bmi to 2 decimal places just for the graph
+            
         # Creates cumulative normal distribution graph shading in given BMI
         ggplot(data.frame(x=c(10,48)), aes(x)) +    # Creates plot from x = 10.6 to 40.6
             # Plots a normal curve with mean = 25.6, sd = 4. Colors area below light blue.
             stat_function(fun=dnorm, args=list(mean,sd), color = color1, size = 2, geom="area", fill=fill1, alpha = 0.4) +     
             scale_x_continuous(name="BMI") +            # Labels x axis "BMI"
-            ggtitle(paste0("Percentile of United States Adult ",gender, "s Less Than Current BMI")) +   # Adds a graph title
+            #ggtitle(paste0("Percentile of United States Adult ",gender, "s Less Than Current BMI")) +   # Adds a graph title
             theme_classic() +                           # Makes the background white theme
             # Shades the normal curve between current and target BMI a darker color
             stat_function(fun=dnorm, args=list(mean,sd), xlim=c(target.bmi,bmi), geom="area", fill=fill2, alpha = 0.7) +
              
             # Creates lines and text on graph
             geom_vline(xintercept=c(18.5,25,30)) +                 # Adds black vertical lines in desired x location
-            geom_label(aes(43,0.0475-y,label=paste("Your BMI: ", round(bmi,digits=1), " (", diagnosis, ")","\n","Your Target BMI: ", round(target.bmi,digits=1), " (", target.diagnosis, ")"   ) ),  size=5)  +    
-            geom_label(aes(43,0.039-y/1.25, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=5) +
-            geom_text(aes(mean,0.02-y/3,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
+            geom_label(aes(44.5,0.0475-y,label=paste("Your BMI: ", round(bmi,digits=1), " (", diagnosis, ")",
+                                                   "\n","Your Target BMI: ", round(target.bmi,digits=1), " (", target.diagnosis, ")")), size=5)  +    
+            geom_label(aes(42.95,0.0405-y/1.225, label=paste0("% of U.S. Adult ",gender, "s < Your BMI: ", bmi.percent,"%",
+                                                             "\n", "% of U.S. Adult ",gender, "s < Your Target BMI: ", target.bmi.percent,"%")), size=5) +
+            geom_label(aes(44.8,0.033-y/1.4, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", 
+                                                           "\n", " for muscle mass or body shape.")), color="red", size=4) +
             geom_text(aes(mean,0, label=paste0("|", "\n", "U.S. Average")), color=color1) +  # Adds average tick mark
             geom_text(aes(bmi,0.0025, label=paste0("Current", "\n", "BMI", "\n", "|")), color=color1) +  # Adds average tick mark
             geom_text(aes(target.bmi,0.0025, label=paste0("Target","\n", "BMI", "\n", "|")), color=color1) +  # Adds average tick mark
