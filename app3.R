@@ -177,7 +177,7 @@ server <- function(input, output) {
             # Plots a normal curve with mean = 25.6, sd = 4. Colors area below light blue.
             stat_function(fun=dnorm, args=list(mean,sd), color = color1, size = 2, geom="area", fill=fill1, alpha = 0.4) +     
             scale_x_continuous(name="BMI") +            # Labels x axis "BMI"
-            ggtitle(paste0("BMI Distribution In The United States For ",gender, " Adult")) +   # Adds a graph title
+            ggtitle(paste0("Percentile of United States Adult ",gender, "s Less Than Current BMI")) +   # Adds a graph title
             theme(plot.title = element_text(size = 30, face = "bold", hjust=.25)) +
             theme_classic() +                           # Makes the background white theme
             # Shades the normal curve to the left of given BMI dark blue
@@ -189,15 +189,14 @@ server <- function(input, output) {
             geom_label(aes(43,0.055-y,label=paste0("Your BMI:  ", round(bmi,digits=1), " (", diagnosis, ")")), size=4)  +    # prints rounded BMI to 1 decimal and Diagnosis on top right 
             geom_label(aes(43,0.052-y,label=paste0("Your Target BMI:  ", round(target.bmi,digits=1), " (", target.diagnosis, ")")), size=4)  +
             geom_label(aes(43,0.046-y, label=paste0("Note: BMI may be a misinformative measure", "\n", " of health as it doesn't take into account", "\n", " for muscle mass or body shape.")), color="red", size=4) +
-            geom_text(aes(mean,0.02,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
+            geom_text(aes(mean,0.02-y/3,label=paste0(percent,"%")), size=10)  +     # Adds % label in middle of graph
             geom_text(aes(mean,0.0001, label=paste0("|", "\n", "U.S. Average")), color=color1) +  # Adds average tick mark
             geom_text(aes(15,0.05-y, label="Underweight")) +       # Adds Underweight text in top corresponding region
             geom_text(aes(22,0.05-y, label="Normal Weight")) +     # Adds Normal Weight text in top corresponding region
             geom_text(aes(27.5,0.05-y, label="Overweight")) +      # Adds Overweight text in top corresponding region
-            geom_text(aes(32,0.05-y, label="Obese"))              # Adds Obese text in top corresponding region
-            #theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
-        
-    })
+            geom_text(aes(32,0.05-y, label="Obese"))    +          # Adds Obese text in top corresponding region
+            theme(axis.title.y=element_blank(), axis.text.y=element_blank(),axis.ticks.y=element_blank())    # Removes y axis information
+         })
     
 #######################################################################################
     
